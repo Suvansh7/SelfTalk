@@ -1,17 +1,25 @@
-# Use the official Python image from the Docker Hub
-FROM python:3.9-slim
-
-# Set the working directory in the container
+FROM python:3-alpine AS builder
+ 
 WORKDIR /app
-
-# Copy the requirements file to the working directory
+ 
+RUN python3 -m venv venv
+ENV VIRTUAL_ENV=/app/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ 
 COPY requirements.txt .
-
-# Install the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application code to the working directory
-COPY . .
-
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+RUN pip install -r requirements.txt
+ 
+# Stage 2
+FROM python:3-alpine AS runner
+ 
+WORKDIR /app
+ 
+COPY --from=builder /app/venv venv
+COPY main.py main.py
+ 
+ENV VIRTUAL_ENV=/app/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ 
+EXPOSE 8000
+ 
+CMD [ "uvicorn", "--host", "0.0.0.0", "main:app" ]
